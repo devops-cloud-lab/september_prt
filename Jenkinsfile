@@ -44,7 +44,7 @@ pipeline {
                     withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDS_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                         sh """
                             ssh -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@${K8S_NODE_IP} '
-                                kubectl set image deployment/web-app web-app=${DOCKER_IMAGE} --record || kubectl apply -f deployment.yaml
+                            kubectl set image deployment/web-app-deployment web-app=${DOCKER_IMAGE} || kubectl apply -f deployment.yaml
                             '
                         """
                     }
