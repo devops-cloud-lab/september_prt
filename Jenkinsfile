@@ -1,22 +1,50 @@
 pipeline {
     agent { label 'ci-agent' }
 
+    environment {
+        DOCKER_IMAGE = "281644/web-app:${BUILD_NUMBER}"
+        DOCKER_LATEST = "281644/web-app:latest"
+        REGISTRY_CREDS = "docker-hub-credentials-id" // Configured in Jenkins Credentials
+        K8S_NODE_IP = "<K8S_NODE_IP>"
+    }
+
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/devops-cloud-lab/september_prt.git'
+                git branch: 'main', url: 'https://github.com/<YOUR_USER>/<YOUR_REPO>.git'
             }
         }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t prt-web-app:latest .'
+                script {
+                    sh "docker build -t ${DOCKER_IMAGE} -t ${DOCKER_LATEST} ."
+                }
             }
         }
-        stage('Verify Container') {
+
+        stage('Push Docker Image') {
             steps {
-                sh 'docker stop test-container || true'
-                sh 'docker rm test-container || true'
-                sh 'docker run -d --name test-container -p 8080:80 prt-web-app:latest'
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', "${REGISTRY_CREDS}") {
+                        sh "docker push ${DOCKER_IMAGE}"
+                        sh "docker push ${DOCKER_LATEST}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Deploy manifests via SSH to k8s-node
+                    sshagent(credentials: ['k8s-ssh-key-id']) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@${K8S_NODE_IP}:/tmp/
+                            ssh -o StrictHostKeyChecking=no ubuntu@${K8S_NODE_IP} 'kubectl apply -f /tmp/deployment.yaml && kubectl apply -f /tmp/service.yaml'
+                        """
+                    }
+                }
             }
         }
     }
