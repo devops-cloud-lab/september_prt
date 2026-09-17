@@ -5,13 +5,13 @@ pipeline {
         DOCKER_IMAGE = "281644/web-app:${BUILD_NUMBER}"
         DOCKER_LATEST = "281644/web-app:latest"
         REGISTRY_CREDS = "docker-hub-credentials-id" // Configured in Jenkins Credentials
-        K8S_NODE_IP = "<K8S_NODE_IP>"
+        K8S_NODE_IP = "172.31.31.221"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<YOUR_USER>/<YOUR_REPO>.git'
+                git branch: 'main', url: 'https://github.com/devops-cloud-lab/september_prt.git'
             }
         }
 
