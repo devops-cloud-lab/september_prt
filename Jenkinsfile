@@ -6,6 +6,7 @@ pipeline {
         DOCKER_LATEST = "281644/web-app:latest"
         REGISTRY_CREDS = "docker-hub-credentials-id" // Configured in Jenkins Credentials
         K8S_NODE_IP = "172.31.31.221"
+        SSH_CREDS_ID = "k8s-ssh-key-id"
     }
 
     stages {
@@ -40,10 +41,11 @@ pipeline {
             steps {
                 script {
                     // Deploy manifests via SSH to k8s-node
-                    sshagent(credentials: ['k8s-ssh-key-id']) {
+                    withCredentials([sshUserPrivateKey(credentialsId: "${SSH_CREDS_ID}", keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                         sh """
-                            scp -o StrictHostKeyChecking=no deployment.yaml service.yaml ubuntu@${K8S_NODE_IP}:/tmp/
-                            ssh -o StrictHostKeyChecking=no ubuntu@${K8S_NODE_IP} 'kubectl apply -f /tmp/deployment.yaml && kubectl apply -f /tmp/service.yaml'
+                            ssh -i \$SSH_KEY -o StrictHostKeyChecking=no \$SSH_USER@${K8S_NODE_IP} '
+                                kubectl set image deployment/web-app web-app=${DOCKER_IMAGE} --record || kubectl apply -f deployment.yaml
+                            '
                         """
                     }
                 }
